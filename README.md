@@ -1,5 +1,8 @@
 # Solr Custom Streaming Expressions
 
+## Overview
+Currently registering custom streaming expressions requires that the jars be in place before starting Solr. Using the Solr Config API and Blob Store API, these jars can be added at runtime after Solr is started. This repo provides an example of loading a custom streaming expression jar into the blob store, registering the jar, adding the streaming expression, and testing it.
+
 ## Requirements
 * Docker
 * Bash
