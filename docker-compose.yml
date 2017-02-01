@@ -1,0 +1,8 @@
+version: '2'
+services:
+  solr:
+    build: ./solr/
+    ports:
+      - '8983:8983'
+    command: ./bin/solr -c -f -a "-Denable.runtime.lib=true"
+
