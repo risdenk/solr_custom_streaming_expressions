@@ -10,8 +10,9 @@ Currently registering custom streaming expressions requires that the jars be in 
 ## Using this example
 `./run.sh`
 
-## Fixes to the StreamHandler
-https://github.com/apache/lucene-solr/blob/master/solr/core/src/java/org/apache/solr/handler/StreamHandler.java#L181
+## Required Fix to the StreamHandler - SOLR-10087
+* https://issues.apache.org/jira/browse/SOLR-10087
+* https://github.com/apache/lucene-solr/blob/master/solr/core/src/java/org/apache/solr/handler/StreamHandler.java#L181
 
 core.getResourceLoader() doesn't work with runtimeLib. This must be changed to core.getMemClassLoader().
 
