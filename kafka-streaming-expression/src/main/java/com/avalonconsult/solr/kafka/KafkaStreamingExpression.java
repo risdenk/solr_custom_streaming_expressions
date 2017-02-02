@@ -15,13 +15,15 @@
  * limitations under the License.
  */
 
-package com.avalonconsult.solr;
+package com.avalonconsult.solr.kafka;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.solr.client.solrj.io.Tuple;
 import org.apache.solr.client.solrj.io.comp.StreamComparator;
 import org.apache.solr.client.solrj.io.stream.StreamContext;
@@ -33,15 +35,14 @@ import org.apache.solr.client.solrj.io.stream.expr.StreamExpression;
 import org.apache.solr.client.solrj.io.stream.expr.StreamExpressionParameter;
 import org.apache.solr.client.solrj.io.stream.expr.StreamFactory;
 
-public class CustomStreamingExpression extends TupleStream implements Expressible {
+public class KafkaStreamingExpression extends TupleStream implements Expressible {
+  private KafkaConsumer<String, String> consumer;
+  private Deque<Tuple> tupleQueue = new ArrayDeque<>();
 
-  private boolean sentTuple = false;
-
-  public CustomStreamingExpression() {
+  public KafkaStreamingExpression() {
   }
 
-  public CustomStreamingExpression(StreamExpression expression, StreamFactory factory) throws IOException{
-
+  public KafkaStreamingExpression(StreamExpression expression, StreamFactory factory) throws IOException{
   }
 
   @Override
@@ -61,24 +62,43 @@ public class CustomStreamingExpression extends TupleStream implements Expressibl
 
   @Override
   public void open() throws IOException {
+    Properties props = new Properties();
+    props.put("bootstrap.servers", "kafka:9092");
+    props.put("group.id", "solr");
+    props.put("enable.auto.commit", "true");
+    props.put("auto.commit.interval.ms", "1000");
+    props.put("session.timeout.ms", "30000");
+    props.put("key.deserializer", StringDeserializer.class);
+    props.put("value.deserializer", StringDeserializer.class);
+    consumer = new KafkaConsumer<>(props);
+    consumer.subscribe(Collections.singletonList("test"));
+  }
 
+  private Tuple createTuple(ConsumerRecord<String, String> record) {
+    Map<String, Object> m = new HashMap<>();
+    m.put("id", String.valueOf(UUID.randomUUID()));
+    m.put("key", record.key());
+    m.put("value", record.value());
+    m.put("offset", record.offset());
+    return new Tuple(m);
   }
 
   @Override
   public void close() throws IOException {
-
+    if (consumer != null) {
+      consumer.close();
+    }
   }
 
   @Override
   public Tuple read() throws IOException {
-    Map<String, Object> m = new HashMap<>();
-    if (sentTuple) {
-      m.put("EOF", true);
-    } else {
-      sentTuple = true;
-      m.put("msg", "My custom streaming expression!");
+    while(tupleQueue.isEmpty()) {
+      ConsumerRecords<String, String> records = consumer.poll(100);
+      for (ConsumerRecord<String, String> record : records) {
+        tupleQueue.add(this.createTuple(record));
+      }
     }
-    return new Tuple(m);
+    return tupleQueue.pop();
   }
 
   @Override
@@ -94,7 +114,7 @@ public class CustomStreamingExpression extends TupleStream implements Expressibl
   @Override
   public Explanation toExplanation(StreamFactory factory) throws IOException {
     return new StreamExplanation(getStreamNodeId().toString())
-        .withFunctionName("customstreamingexpression")
+        .withFunctionName("kafkastreamingexpression")
         .withImplementingClass(this.getClass().getName())
         .withExpressionType(Explanation.ExpressionType.STREAM_SOURCE)
         .withExpression("--non-expressible--");

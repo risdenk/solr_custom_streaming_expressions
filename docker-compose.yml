@@ -1,8 +1,25 @@
 version: '2'
 services:
+  zookeeper:
+    image: zookeeper
+
   solr:
     build: ./solr/
     ports:
       - '8983:8983'
-    command: ./bin/solr -c -f -a "-Denable.runtime.lib=true"
+    depends_on:
+      - zookeeper
+    command: ./bin/solr -c -z zookeeper -f -a "-Denable.runtime.lib=true -Dblob.max.size.mb=25 -Dsolr.autoSoftCommit.maxTime=1000"
+
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - '9092:9092'
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ADVERTISED_PORT: 9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CREATE_TOPICS: "test:1:1"
 
