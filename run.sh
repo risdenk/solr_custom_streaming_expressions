@@ -19,7 +19,7 @@ curl -X POST -H 'Content-Type: application/octet-stream' --data-binary @custom-s
 curl 'http://localhost:8983/solr/.system/blob?omitHeader=true'
 
 curl 'http://localhost:8983/solr/test/config' -H 'Content-type:application/json' -d '{
-   "add-runtimelib": { "name":"test/1", "version":1 }
+   "add-runtimelib": { "name":"test", "version":1 }
 }'
 
 curl 'http://localhost:8983/solr/test/config' -H 'Content-type:application/json' -d '{
